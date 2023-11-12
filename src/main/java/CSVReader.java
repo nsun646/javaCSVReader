@@ -11,7 +11,6 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
 public class CSVReader {
-
     public static void main(String[] args) {
         String pathToCsv = "service-names-port-numbers.csv";
         String line;
@@ -50,16 +49,17 @@ public class CSVReader {
         try {
             jedis = new Jedis("localhost");
 
-            Map<Integer, String> openPortsMap = scanOpenPorts(portMap.keySet());
+            Set<Integer> openPorts = scanOpenPorts(portMap.keySet());
 
-            for (Map.Entry<Integer, String> entry : openPortsMap.entrySet()) {
-                jedis.set(entry.getKey().toString(), entry.getValue());
-            }
+            System.out.println("Open Ports Descriptions:");
 
             for (Integer key : sortedKeys) {
-                String value = jedis.get(key.toString());
-                System.out.println("Key: " + key + ", Value: " + value);
+                if (openPorts.contains(key)) {
+                    String description = portMap.get(key);
+                    System.out.println("Port: " + key + ", Description: " + description);
+                }
             }
+
         } catch (JedisConnectionException e) {
             System.out.println("Could not connect to Redis: " + e.getMessage());
         } catch (Exception e) {
@@ -70,22 +70,17 @@ public class CSVReader {
             }
         }
     }
-    private static Map<Integer, String> scanOpenPorts(Set<Integer> ports) {
-        Map<Integer, String> openPortsMap = new HashMap<>();
+    private static Set<Integer> scanOpenPorts(Set<Integer> ports) {
+        Set<Integer> openPorts = new TreeSet<>();
 
-        String targetHost = "localhost";
-        int minPort = 1;
-        int maxPort = 65535;
-
-        for (int port = minPort; port <= maxPort; port++) {
-            try {
-                Socket socket = new Socket(targetHost, port);
-                openPortsMap.put(port, "Open Port");
-                socket.close();
+        for (int port : ports) {
+            try (Socket socket = new Socket()) {
+                socket.connect(new InetSocketAddress("localhost", port), 1000);
+                openPorts.add(port);
             } catch (IOException e) {
-                // Port is likely closed or unreachable
             }
         }
-        return openPortsMap;
+
+        return openPorts;
     }
 }
