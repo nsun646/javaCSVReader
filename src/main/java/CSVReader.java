@@ -11,6 +11,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;
 
 public class CSVReader {
+
     public static void main(String[] args) {
         String pathToCsv = "service-names-port-numbers.csv";
         String line;
